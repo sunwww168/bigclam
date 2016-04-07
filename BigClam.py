@@ -4,17 +4,19 @@ from itertools import combinations
 # from agm import AGM, community
 import numpy as np
 import random
+import math
 
-def bigclam(graph, community_num, step_size=0.01,threshold=0.01): # max_iter
+def bigclam(graph, community_num, step_size,threshold): # max_iter
 	# initialize a random matrix F
 	F = np.matrix(np.ones((len(graph.nodes()),community_num)))
 	print np.shape(F)
 	for i in range(np.shape(F)[0]):
 		for j in range(np.shape(F)[1]):
 			F[i,j] = random.random()
-
+	# print F
 	# MLE
 	iter = 0
+	last_norm = 1000000
 	while  True:
 		# we cannot use last_F = F cause this is an assignment and will pass the reference of the class F, not copy
 		last_F = F.copy()
@@ -24,19 +26,24 @@ def bigclam(graph, community_num, step_size=0.01,threshold=0.01): # max_iter
 			u = F[node,:]
 			for neighbor in graph.neighbors(node):
 				v = F[neighbor,:]
-				gradient += v*float(np.exp(-u*v.transpose())/(1-np.exp(-u*v.transpose()))) + v
+				# if 1-math.exp(-u*v.transpose()) == 0:
+				# 	print u,v
+				gradient += v*float(math.exp(-u*v.transpose())/(1-math.exp(-u*v.transpose()))) + v
 			gradient += u - np.sum(F,axis=0)
 			# update row u
 			F[node,:] = F[node,:] + step_size*gradient
 			# check for non-negative constrain
-			for i in range(community_num):
-				if F[node,i] < 0:
-					F[node,i] = 0
-		print 'iter is ', iter
-		change = np.sum(np.multiply(F-last_F,F-last_F))
-		if  change <= 0.01:
+			# for i in range(community_num):
+			# 	if F[node,i] < 0:
+			# 		F[node,i] = 0.0001
+		f_norm = np.linalg.norm(np.sum(np.multiply(F-last_F,F-last_F)))
+		if f_norm > last_norm:
+			F = last_F.copy()
+			step_size = step_size*0.1
+		last_norm = f_norm
+		print 'iter is ', iter, '  Frobenius norm is ', float(f_norm), '  step_size is',step_size
+		if  f_norm <= threshold:
 			break
-		print 'change is ', float(change)
 	print iter
 	return F
 
@@ -55,8 +62,19 @@ def GenerateGraph():
 			G.add_edge(pair[0], pair[1])
 	return G
 
+
+def Reshape(F):
+	for i in range(np.shape(F)[0]):
+		for j in range(np.shape(F)[1]):
+			if F[i,j] <= 0.2:
+				F[i,j] = 0
+			if F[i,j] >= 0.8:
+				F[i,j] = 1
+	return F
+
 G = GenerateGraph()
-F = bigclam(G, 4)
+F = bigclam(G, 4,0.01,0.00001)
+F = Reshape(F)
 print F
 
 
