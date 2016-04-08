@@ -29,11 +29,11 @@ def bigclam(graph, community_num, step_size,threshold): # max_iter
 				gradient += v*float(np.exp(-u*v.transpose())/(1-np.exp(-u*v.transpose()))) + v
 			gradient += u - np.sum(F,axis=0)
 			# update row u
-			F[node,:] = F[node,:] + step_size*gradient
+			F[node,:] = F[node,:] + 0.1/iter*gradient
 			# check for non-negative
 			for i in range(community_num):
-				if F[node,i] < 0:
-					F[node,i] = 0
+				if F[node,i] <= 0:
+					F[node,i] = 0.001
 		f_norm = np.sum(np.multiply(F-last_F,F-last_F))**0.5
 		# print( type(f_norm))
 		# if f_norm > last_norm:
@@ -67,5 +67,5 @@ communities = [community(range(12), 0.8),
                community(range(8,12)+range(17,24), 0.8)]
 #random.seed(123)
 G = AGM(nodes,communities)
-F = bigclam(G, 3, 0.001, 0.001)
+F = bigclam(G, 3, 0.01, 0.01)
 print Reshape(F)

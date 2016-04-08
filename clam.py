@@ -15,38 +15,35 @@ def bigclam(graph, community_num, step_size,threshold): # max_iter
 	
 	# MLE
 	iter = 0
-	gradient_matrix = np.matrix(np.zeros((len(graph.nodes()),community_num)))
 	last_norm = 1000000000
 	while  True:
 		# we cannot use last_F = F cause this is an assignment and will pass the reference of the class F, not copy
 		last_F = F.copy()
 		iter += 1
-		step_size = 0.01/iter
 		for node in range(len(graph.nodes())):
+			gradient = np.matrix(np.zeros((1,community_num)))
 			u = F[node,:]
 			for neighbor in graph.neighbors(node):
 				v = F[neighbor,:]
-				gradient_matrix[node,:] += v*float(np.exp(-u*v.transpose())/(1-np.exp(-u*v.transpose()))) + v
-			gradient_matrix[node,:] += u - np.sum(F,axis=0)
+				gradient += v*float(np.exp(-u*v.transpose())/(1-np.exp(-u*v.transpose()))) + v
+			gradient += u - np.sum(F,axis=0)
 			# update row u
-			F[node,:] = F[node,:] + step_size*gradient_matrix[node,:]
-			
+			F[node,:] = F[node,:] + step_size*gradient
 			# check for non-negative constrain
 			for i in range(community_num):
-				if F[node,i]<=0:
+				if F[node,i] < 0:
 					F[node,i] = 0.001
-				if F[node,i]>=1:
-					F[node,i]=0.999
+				if F[node,i] > 10:
+					F[node,i] = 10
 		f_norm = np.sum(np.multiply(F-last_F,F-last_F))**0.5
-		# f_norm = np.linalg.norm(gradient_matrix)
-		print 'iter is ', iter, '  Frobenius norm is ', float(f_norm), '  last_norm is ', float(last_norm),'  step_size is ',step_size
+		print 'iter is ', iter, '  Frobenius norm is ', float(f_norm), '  step_size is ',step_size
 		if  f_norm <= threshold:
 			break
-		# if f_norm > last_norm:
-		# 	F = last_F.copy()
-		# 	#print f_norm
-		# 	step_size = step_size*0.5
-		# 	continue
+		if f_norm > last_norm*1.01:
+			F = last_F.copy()
+			#print f_norm
+			step_size = step_size*0.1
+			continue
 		last_norm = f_norm
 		
 	print iter
@@ -62,7 +59,7 @@ def GenerateGraph():
 	communities = [community_1,community_2,community_3,community_4]
 	for community in communities:
 		random.shuffle(community)
-		for i in range(300):
+		for i in range(230):
 			pair = random.sample(community, 2)
 			G.add_edge(pair[0], pair[1])
 	return G
@@ -78,10 +75,10 @@ def Reshape(F):
 	return F
 
 G = GenerateGraph()
-F = bigclam(G, 4,0.01,0.01)
+F = bigclam(G, 4,0.01,0.0001)
 # F = MLEwithGradient(G, 4, 0.01, 0.00005)
 
-print F
+print Reshape(F)
 
 
 # nodes = range(24)
